@@ -3,6 +3,7 @@ from transformers import BertForSequenceClassification, BertTokenizerFast, Train
 from nlp import load_dataset
 import torch
 import numpy as np
+import sys
 
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -18,7 +19,16 @@ def compute_metrics(pred):
         'recall': recall
     }
 
-dataset = load_dataset('csv', data_files='../PreppedData/english.csv', split='train')
+if len(sys.argv) > 1:
+    file_name = sys.argv[1]
+else:
+    file_name = 'english'
+
+print(f"Processing {file_name} data")
+
+data_file = f'/home/tonymullen/Dropbox/Research/Tandem_NLP/PreppedData/{file_name}.csv'
+
+dataset = load_dataset('csv', data_files=data_file, split='train')
 print(type(dataset))
 
 dataset = dataset.train_test_split(test_size=0.3)
@@ -27,7 +37,8 @@ print(dataset)
 train_set = dataset['train']
 test_set = dataset['test']
 
-model = BertForSequenceClassification.from_pretrained('bert-base-multilingual-cased').to('cuda')
+# model = BertForSequenceClassification.from_pretrained('bert-base-multilingual-cased').to('cuda')
+model = BertForSequenceClassification.from_pretrained('bert-base-multilingual-cased')
 tokenizer = BertTokenizerFast.from_pretrained('bert-base-multilingual-cased')
 
 def preprocess(data):
@@ -41,14 +52,14 @@ test_set.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
 
 print(test_set)
 
-batch_size = 8
-epochs = 100
+batch_size = 4
+epochs = 10
 
 warmup_steps = 500
 weight_decay = 0.01
 
 training_args = TrainingArguments(
-    output_dir='./results',
+    output_dir='/media/tonymullen/Rapid/BERT/results_'+data_file,
     num_train_epochs=epochs,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
@@ -69,3 +80,4 @@ trainer = Trainer(
 
 trainer.train()
 trainer.evaluate()
+
